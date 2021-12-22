@@ -51,7 +51,6 @@ int main(int argc, char *argv[])
 	//  create a structure
 
 	// uint8_t spx_data[128] = {0};
-
     struct speex_str entity = {.spx_data = {0}};
     struct wav_header header;
 	int header_len = 2;

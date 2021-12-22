@@ -10,17 +10,8 @@
 #include <fcntl.h> // for open
 #include <unistd.h> // for close
 
-#if 1
-#define print(format, ...) \
-	{printf("[%s : %d] ", \
-	__func__, __LINE__); \
-	printf(format, ##__VA_ARGS__);}
-#else
-#define print(format, ...) 
-#endif
-
-spx_int16_t pcm_frame[320];
-uint8_t spx_frame[128];
+// spx_int16_t pcm_frame[320];
+// uint8_t spx_frame[128];
 
 static int _get_framesize( int samplerate ){
 	return (samplerate * 2)/ (1000/20); /* 20ms */
