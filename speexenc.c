@@ -6,33 +6,27 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <speex/speex.h>
+#include "speex_api.h"
+#include <fcntl.h> // for open
+#include <unistd.h> // for close
+
+#if 1
+#define print(format, ...) \
+	{printf("[%s : %d] ", \
+	__func__, __LINE__); \
+	printf(format, ##__VA_ARGS__);}
+#else
+#define print(format, ...) 
+#endif
 
 spx_int16_t pcm_frame[320];
 uint8_t spx_frame[128];
 
-struct wav_header
-{
-	char riff_id[4];			/*("RIFF"*/
-	uint32_t size0;				/*file len - 8*/
-	char wave_fmt[8];			/*"WAVEfmt "*/
-	uint32_t size1;				/*0x10*/
-	uint16_t fmttag;			/*0x01*/
-	uint16_t channel;			/*1*/
-	uint32_t samplespersec;			/*8000*/
-	uint32_t bytepersec;			/*8000 * 2*/
-	uint16_t blockalign;			/*1 * 16 / 8*/
-	uint16_t bitpersamples;			/*16*/
-	char data_id[4];			/*"data"*/
-	uint32_t size2;				/*file len - 44*/
-};
-
-static int _get_framesize(int samplerate)
-{
+static int _get_framesize( int samplerate ){
 	return (samplerate * 2)/ (1000/20); /* 20ms */
 }
 
-static int _write_header(uint8_t *frame, int pdu_len, int headersz)
-{
+static int _write_header( uint8_t *frame, int pdu_len, int headersz ){
 	switch (headersz) {
 	case 1:
 		*frame = pdu_len;
@@ -56,89 +50,66 @@ static int _write_header(uint8_t *frame, int pdu_len, int headersz)
 
 int main(int argc, char** argv)
 {
+
+	//int speex_headersz;
+	// create the speex_str entity
+
+    struct speex_str entity;
 	int in_fd, out_fd;
 	int frame_size;
-
-	int speex_headersz;
-
-	struct wav_header header;
-	void *speex = NULL;
-	void *pre = NULL;
-
-	void *st = 0;
-	SpeexBits bits;
+    struct wav_header header;
+	entity.st = 0;
+	//speex_headersz = 2;
+	entity.speex_headersz = 2;
 
 	if ((argc != 2) && (argc != 3)) {
 		printf("usage: speexenc in_wav_file [out_speex_file]\n");
 		return -1;
 	}
-
-	speex_headersz = 2;
-
 	in_fd = open(argv[1], O_RDONLY, 0);
 	if (in_fd < 0) {
 		printf("open wav failed!\n");
 		return -1;
 	}
-
+    
 	if (argc == 3)
-		out_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		 out_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	else
-		out_fd = open("dummy.spx", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		 out_fd = open("dummy.spx", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+
 	if (out_fd < 0) {
 		printf("open speex file failed!\n");
 		close(in_fd);
 		return -1;
 	}
+  
 
 	/* read riff header */
-	read(in_fd, &header, sizeof(struct wav_header));
-	frame_size = _get_framesize(header.samplespersec);
+	read( in_fd, &header, sizeof(struct wav_header) );
+	frame_size = _get_framesize( header.samplespersec );
+    
+	// initialization
+	entity.samplespersec = header.samplespersec;
+	//printf( "%d\n", header.samplespersec );
 
-	{
-		int mode;
+	speex_init( 1, &entity );
 
-		if (header.samplespersec > 12500) mode = SPEEX_MODEID_WB;
-		else mode = SPEEX_MODEID_NB;
-
-		st = speex_encoder_init(speex_lib_get_mode(mode));
-	}
-
-	{
-		spx_int32_t tmp;
-
-		tmp = 1;
-		speex_encoder_ctl(st, SPEEX_SET_COMPLEXITY, &tmp);
-		speex_encoder_ctl(st, SPEEX_SET_DTX, &tmp);
-		speex_encoder_ctl(st, SPEEX_SET_VBR, &tmp);
-
-		tmp = 8;
-		speex_encoder_ctl(st, SPEEX_SET_QUALITY, &tmp);
-		tmp = header.samplespersec;
-		speex_encoder_ctl(st, SPEEX_SET_SAMPLING_RATE, &tmp);
-	}
-
-	/* Speex encoding initializations */
-	speex_bits_init(&bits);
-
+	// feed
 	while (1) {
-		/* hand one frame */
-		int length = read(in_fd, pcm_frame, frame_size);
-		if (length != frame_size) break;
+        /* hand one frame */
+         entity.length = read( in_fd, entity.pcm_frame, frame_size );
+        if ( entity.length != frame_size ) break;
 
-		speex_bits_reset(&bits);
-		speex_encode_int(st, pcm_frame, &bits);
-		length = speex_bits_write(&bits,
-				&spx_frame[speex_headersz],
-				sizeof(spx_frame) - speex_headersz);
+	    speex_feed( 1, &entity );
 
-		_write_header(spx_frame, length, speex_headersz);
-		write(out_fd, spx_frame, length + speex_headersz);
+		_write_header(entity.spx_frame, entity.length, entity.speex_headersz);
+	    write(out_fd, entity.spx_frame, entity.length + entity.speex_headersz);
 	}
-	speex_encoder_destroy(st);
-	speex_bits_destroy(&bits);
-	close(in_fd);
-	close(out_fd);
 
-	return 0;
+	//deinit
+    speex_deinit( 1, &entity );
+	close( in_fd );
+	close( out_fd );
+
+   return 0;
 }
