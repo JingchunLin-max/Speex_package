@@ -45,7 +45,7 @@ void speex_init( int flag, struct speex_str* entity ){
 
 };
 
-void speex_feed( int flag, struct speex_str * entity ){
+void speex_feed( int flag, struct speex_str * entity, spx_int16_t**pcm_frame, uint8_t** spx_frame ){
         //encoder
         if( flag == 1)
         {
@@ -54,6 +54,9 @@ void speex_feed( int flag, struct speex_str * entity ){
             entity->length = speex_bits_write( &(entity->bits),
                     &(entity->spx_frame[ entity->speex_headersz]),
                     sizeof(entity->spx_frame) - entity->speex_headersz );
+
+            (*pcm_frame) = entity->pcm_frame;
+            (*spx_frame ) = entity->spx_frame;
         }
     //decoder
         else if ( flag == 0 )
@@ -63,6 +66,9 @@ void speex_feed( int flag, struct speex_str * entity ){
                 
                 int ret = speex_decode_int( entity->stateDecode, &(entity->bitsDecode), 
                 (spx_int16_t*) entity->pcm_frame );
+
+                (*pcm_frame) = entity->pcm_frame;
+                (*spx_frame ) = entity->spx_frame;
         }
 };
 

@@ -9,9 +9,8 @@
 #include <speex/speex.h>
 #include"speex_api.h"
 
-//spx_int16_t pcm_frame[320];
-
-
+spx_int16_t* pcm_frame;
+uint8_t* spx_frame;
 
 static void init_wav_header( char *wav_buf, uint32_t wav_len, int samplerate )
 {
@@ -50,7 +49,7 @@ int main(int argc, char *argv[])
 {
 	//  create a structure
 
-	// uint8_t spx_data[128] = {0};
+	
     struct speex_str entity = {.spx_data = {0}};
     struct wav_header header;
 	int header_len = 2;
@@ -100,9 +99,9 @@ int main(int argc, char *argv[])
             if( length != entity.frame_len ) break;
             
 			// feed
-			speex_feed( 0, &entity );
+			speex_feed( 0, &entity, &pcm_frame, &spx_frame );
 
-			write(out_fd, entity.pcm_frame, sample_num * sizeof(uint16_t));
+			write(out_fd, pcm_frame, sample_num * sizeof(uint16_t));
             pcm_length += sample_num * sizeof(uint16_t);
 		}
 

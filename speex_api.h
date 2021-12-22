@@ -46,7 +46,7 @@ struct speex_str
 
 //static int get_header_length( uint8_t *data, int header_len );
 void speex_init( int flag, struct speex_str * entity );
-void speex_feed( int flag, struct speex_str * entity );
+void speex_feed( int flag, struct speex_str * entity, spx_int16_t**pcm_frame, uint8_t**spx_frame );
 void speex_deinit( int flag, struct speex_str * entity );
 
 // #endif

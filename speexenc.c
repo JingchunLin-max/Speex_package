@@ -10,8 +10,8 @@
 #include <fcntl.h> // for open
 #include <unistd.h> // for close
 
-// spx_int16_t pcm_frame[320];
-// uint8_t spx_frame[128];
+spx_int16_t* pcm_frame;
+uint8_t* spx_frame;
 
 static int _get_framesize( int samplerate ){
 	return (samplerate * 2)/ (1000/20); /* 20ms */
@@ -91,10 +91,10 @@ int main(int argc, char** argv)
          entity.length = read( in_fd, entity.pcm_frame, frame_size );
         if ( entity.length != frame_size ) break;
 
-	    speex_feed( 1, &entity );
+	    speex_feed( 1, &entity, &pcm_frame, &spx_frame );
 
-		_write_header(entity.spx_frame, entity.length, entity.speex_headersz);
-	    write(out_fd, entity.spx_frame, entity.length + entity.speex_headersz);
+		_write_header(spx_frame, entity.length, entity.speex_headersz);
+	    write(out_fd, spx_frame, entity.length + entity.speex_headersz);
 	}
 
 	//deinit
